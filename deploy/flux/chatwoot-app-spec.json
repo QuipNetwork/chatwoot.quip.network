@@ -1,0 +1,126 @@
+{
+  "version": 8,
+  "name": "quipchatwoot",
+  "description": "Chatwoot CE support inbox: website live chat and agent dashboard.",
+  "owner": "1H18UuAxugZihfoagL8xNT1Rpxn55dZtZ3",
+  "compose": [
+    {
+      "name": "rails",
+      "description": "Chatwoot web (Puma). Runs db:chatwoot_prepare before every start.",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-<sha>-amd64@sha256:<digest>",
+      "ports": [
+        31986
+      ],
+      "domains": [
+        "support.quip.network"
+      ],
+      "environmentParameters": [
+        "SECRET_KEY_BASE=<openssl-rand-hex-64>",
+        "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=<rails-db-encryption-init>",
+        "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=<rails-db-encryption-init>",
+        "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=<rails-db-encryption-init>",
+        "POSTGRES_PASSWORD=<pg-password-hex>",
+        "REDIS_PASSWORD=<redis-password-hex>",
+        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply>",
+        "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
+        "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
+        "timeout=3600000"
+      ],
+      "commands": [],
+      "containerPorts": [
+        3000
+      ],
+      "containerData": "/tmp",
+      "cpu": 1,
+      "ram": 2048,
+      "hdd": 1,
+      "repoauth": ""
+    },
+    {
+      "name": "sidekiq",
+      "description": "Chatwoot background jobs (mail, notifications, scheduled jobs).",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-<sha>-amd64@sha256:<digest>",
+      "ports": [],
+      "domains": [],
+      "environmentParameters": [
+        "SECRET_KEY_BASE=<openssl-rand-hex-64>",
+        "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=<rails-db-encryption-init>",
+        "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=<rails-db-encryption-init>",
+        "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=<rails-db-encryption-init>",
+        "POSTGRES_PASSWORD=<pg-password-hex>",
+        "REDIS_PASSWORD=<redis-password-hex>",
+        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply>",
+        "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
+        "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>"
+      ],
+      "commands": [
+        "bundle",
+        "exec",
+        "sidekiq",
+        "-C",
+        "config/sidekiq.yml"
+      ],
+      "containerPorts": [],
+      "containerData": "/tmp",
+      "cpu": 1,
+      "ram": 2048,
+      "hdd": 1,
+      "repoauth": ""
+    },
+    {
+      "name": "postgres",
+      "description": "Postgres 16 + pgvector. Dumps to S3 every 5 min, restores on a fresh volume.",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:pg16-<sha>-amd64@sha256:<digest>",
+      "ports": [],
+      "domains": [],
+      "environmentParameters": [
+        "POSTGRES_USER=chatwoot",
+        "POSTGRES_PASSWORD=<pg-password-hex>",
+        "POSTGRES_DB=chatwoot",
+        "S3_ENDPOINT=https://gateway.storjshare.io",
+        "S3_BUCKET=chatwoot-db",
+        "S3_ACCESS_KEY=<storj-DB-access-key>",
+        "S3_SECRET_KEY=<storj-DB-secret-key>",
+        "S3_PREFIX=chatwoot-pg/",
+        "DUMP_INTERVAL_SECONDS=300",
+        "DUMP_KEEP=576"
+      ],
+      "commands": [],
+      "containerPorts": [],
+      "containerData": "/var/lib/postgresql/data",
+      "cpu": 0.5,
+      "ram": 1024,
+      "hdd": 20,
+      "repoauth": ""
+    },
+    {
+      "name": "redis",
+      "description": "Redis for the Sidekiq queue and ActionCable. Loss on relocation is accepted.",
+      "repotag": "redis:7.4-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af",
+      "ports": [],
+      "domains": [],
+      "environmentParameters": [
+        "REDIS_PASSWORD=<redis-password-hex>"
+      ],
+      "commands": [
+        "sh",
+        "-c",
+        "exec docker-entrypoint.sh redis-server --requirepass \"$REDIS_PASSWORD\" --appendonly yes"
+      ],
+      "containerPorts": [],
+      "containerData": "/data",
+      "cpu": 0.25,
+      "ram": 512,
+      "hdd": 1,
+      "repoauth": ""
+    }
+  ],
+  "instances": 1,
+  "contacts": [],
+  "geolocation": [
+    "acNA"
+  ],
+  "nodes": [],
+  "staticip": true,
+  "enterprise": "<set-by-the-dashboard-Enterprise-toggle-at-submit>"
+}

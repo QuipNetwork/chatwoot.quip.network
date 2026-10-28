@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Chatwoot widget test</title>
+  <style>body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 40rem; }</style>
+</head>
+<body>
+  <h1>Chatwoot widget test</h1>
+  <p>Stands in for a customer site on another origin. Open with
+     <code>?token=&lt;website inbox token&gt;</code> from Settings &rarr; Inboxes &rarr; Configuration.</p>
+  <p id="state">No token given.</p>
+  <script>
+    (function () {
+      var token = new URLSearchParams(location.search).get('token');
+      if (!token) return;
+      var base = 'https://localhost:8443';
+      document.getElementById('state').textContent = 'Loading the widget from ' + base + ' ...';
+      var s = document.createElement('script');
+      s.src = base + '/packs/js/sdk.js';
+      s.async = true;
+      s.onload = function () {
+        window.chatwootSDK.run({ websiteToken: token, baseUrl: base });
+        document.getElementById('state').textContent = 'Widget loaded: bubble at bottom right.';
+      };
+      s.onerror = function () {
+        document.getElementById('state').textContent = 'Could not load sdk.js -- accept the self-signed cert at ' + base + ' first.';
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

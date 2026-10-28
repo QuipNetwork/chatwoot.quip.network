@@ -1,0 +1,142 @@
+# Local rehearsal of the quipchatwoot Flux app. Start it with deploy/local/up.sh.
+#
+# Faithful where it matters for the deploy:
+#   - service names are Flux's inter-component names (flux<component>_<app>),
+#     so the baked POSTGRES_HOST / REDIS_URL are exercised as-is
+#   - mem_limit equals each component's Flux ram
+#   - the edge copies FDM: TLS ends there, rails gets plain HTTP, no X-Forwarded-Proto
+#   - everything except the edge sits on an internal network with NO egress,
+#     so a phone-home attempt fails loudly in the logs instead of succeeding
+# Stand-ins: MinIO for Storj, Mailpit for Proton SMTP.
+name: chatwoot-rehearsal
+
+x-app-secrets: &app-secrets
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:?run deploy/local/up.sh}
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${AR_PRIMARY_KEY:?}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${AR_DETERMINISTIC_KEY:?}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${AR_KEY_DERIVATION_SALT:?}
+  POSTGRES_PASSWORD: ${PG_PASSWORD:?}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+  SMTP_PASSWORD: rehearsal-not-a-secret
+  STORAGE_ACCESS_KEY_ID: ${MINIO_USER:?}
+  STORAGE_SECRET_ACCESS_KEY: ${MINIO_PASSWORD:?}
+  # Rehearsal-only overrides of baked values:
+  FRONTEND_URL: https://localhost:8443
+  STORAGE_ENDPOINT: http://localhost:9000
+  SMTP_ADDRESS: mailpit
+  SMTP_PORT: "1025"
+  SMTP_ENABLE_STARTTLS_AUTO: "false"
+  # Control arm for the FDM https trap: QUIP_ASSUME_SSL=false up.sh
+  QUIP_ASSUME_SSL: ${QUIP_ASSUME_SSL:-true}
+
+services:
+  fluxrails_quipchatwoot:
+    image: ${APP_IMAGE:?}
+    environment: *app-secrets
+    depends_on: [fluxpostgres_quipchatwoot, fluxredis_quipchatwoot, minio-init]
+    mem_limit: 2048m
+    networks: [backend]
+
+  fluxsidekiq_quipchatwoot:
+    image: ${APP_IMAGE:?}
+    command: [bundle, exec, sidekiq, -C, config/sidekiq.yml]
+    environment: *app-secrets
+    depends_on: [fluxpostgres_quipchatwoot, fluxredis_quipchatwoot, minio-init]
+    mem_limit: 2048m
+    networks: [backend]
+
+  fluxpostgres_quipchatwoot:
+    image: ${PG_IMAGE:?}
+    environment:
+      POSTGRES_USER: chatwoot
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?}
+      POSTGRES_DB: chatwoot
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: chatwoot-db
+      S3_ACCESS_KEY: ${S3_DB_ACCESS_KEY:-${MINIO_USER:?}}
+      S3_SECRET_KEY: ${MINIO_PASSWORD:?}
+      S3_PREFIX: chatwoot-pg/
+      DUMP_INTERVAL_SECONDS: ${DUMP_INTERVAL_SECONDS:-300}
+      DUMP_KEEP: "576"
+      ALLOW_EMPTY_RESTORE: ${ALLOW_EMPTY_RESTORE:-0}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    depends_on: [minio-init]
+    mem_limit: 1024m
+    networks: [backend]
+
+  fluxredis_quipchatwoot:
+    image: redis:7.4-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af
+    command: [sh, -c, 'exec docker-entrypoint.sh redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+    volumes: [redisdata:/data]
+    mem_limit: 512m
+    networks: [backend]
+
+  # --- stand-ins and plumbing ---
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: [server, /data]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?}
+    volumes: [miniodata:/data]
+    networks: [backend]
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    entrypoint: [sh, -c]
+    command:
+      - |
+        until mc alias set local http://minio:9000 "$$MINIO_USER" "$$MINIO_PASSWORD" >/dev/null 2>&1; do sleep 1; done
+        mc mb -p local/chatwoot-db local/chatwoot-uploads
+    environment:
+      MINIO_USER: ${MINIO_USER:?}
+      MINIO_PASSWORD: ${MINIO_PASSWORD:?}
+    depends_on: [minio]
+    restart: "no"
+    networks: [backend]
+
+  s3fwd-rails:
+    image: haproxy:3.2-alpine@sha256:5893840576071e6217cd52ebdcc14f454c6f7a631056fa6f4e0f40d3cac4215b
+    volumes: [./s3-forward.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro]
+    network_mode: service:fluxrails_quipchatwoot
+
+  s3fwd-sidekiq:
+    image: haproxy:3.2-alpine@sha256:5893840576071e6217cd52ebdcc14f454c6f7a631056fa6f4e0f40d3cac4215b
+    volumes: [./s3-forward.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro]
+    network_mode: service:fluxsidekiq_quipchatwoot
+
+  mailpit:
+    image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    networks: [backend]
+
+  edge:
+    image: haproxy:3.2-alpine@sha256:5893840576071e6217cd52ebdcc14f454c6f7a631056fa6f4e0f40d3cac4215b
+    environment:
+      FDM_TIMEOUT: ${FDM_TIMEOUT:-25s}
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./widget-test.html:/usr/local/etc/haproxy/widget-test.html:ro
+      - ./certs:/certs:ro
+    ports:
+      - 127.0.0.1:8443:8443
+      - 127.0.0.1:9000:9000
+      - 127.0.0.1:8025:8025
+      - 127.0.0.1:8080:8080
+    depends_on: [fluxrails_quipchatwoot, mailpit, minio]
+    networks: [backend, edge]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+
+networks:
+  backend:
+    internal: true
+  edge: {}
