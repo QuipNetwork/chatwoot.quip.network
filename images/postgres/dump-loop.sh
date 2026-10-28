@@ -29,6 +29,18 @@ dump_once() {
     key="${PREFIX}dump-${ts}.dump"
     tmp="$(mktemp /tmp/dump.XXXXXX.dump)"
 
+    # An empty schema (first boot, before rails migrates) is never worth a dump,
+    # and restore-on-boot refuses one -- publishing it would make the newest
+    # dump unrestorable until the next tick replaced it.
+    local tables
+    tables="$(psql -tAX --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+        -c "select count(*) from information_schema.tables where table_schema='public';" 2>/dev/null)"
+    if ! [ "${tables:-0}" -ge 1 ] 2>/dev/null; then
+        log "public schema is empty -- nothing to dump yet"
+        rm -f "$tmp"
+        return 1
+    fi
+
     if ! pg_dump -Fc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --file "$tmp"; then
         log "pg_dump failed"
     # Never publish an empty or truncated dump: it would sort newest and become

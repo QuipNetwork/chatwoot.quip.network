@@ -29,7 +29,7 @@ export APP_IMAGE PG_IMAGE
 # Rehearsal secrets: random, local, gitignored, stable across restarts so the
 # relocation drill restores into the same keys -- exactly as on Flux.
 if [ ! -s .env ]; then
-    umask 077
+    (umask 077
     {
         echo "SECRET_KEY_BASE=$(openssl rand -hex 64)"
         echo "AR_PRIMARY_KEY=$(openssl rand -hex 16)"
@@ -39,7 +39,7 @@ if [ ! -s .env ]; then
         echo "REDIS_PASSWORD=$(openssl rand -hex 24)"
         echo "MINIO_USER=rehearsal"
         echo "MINIO_PASSWORD=$(openssl rand -hex 24)"
-    } > .env
+    } > .env)
     echo "==> wrote rehearsal secrets to deploy/local/.env"
 fi
 
@@ -49,9 +49,14 @@ if [ ! -s certs/edge.pem ]; then
         -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
         -keyout certs/edge.key -out certs/edge.crt 2>/dev/null
     cat certs/edge.crt certs/edge.key > certs/edge.pem
-    chmod 644 certs/edge.pem
+    # haproxy runs as a non-root user; this throwaway key guards nothing.
+    chmod 755 certs && chmod 644 certs/edge.pem
     echo "==> wrote a self-signed localhost cert to deploy/local/certs/"
 fi
+
+# Record the images in .env too, so plain `docker compose logs|ps|down` work.
+sed -i -e '/^APP_IMAGE=/d' -e '/^PG_IMAGE=/d' .env
+printf 'APP_IMAGE=%s\nPG_IMAGE=%s\n' "$APP_IMAGE" "$PG_IMAGE" >> .env
 
 echo "==> app:      ${APP_IMAGE}"
 echo "==> postgres: ${PG_IMAGE}"
