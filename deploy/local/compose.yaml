@@ -3,7 +3,7 @@
 # Faithful where it matters for the deploy:
 #   - service names are Flux's inter-component names (flux<component>_<app>),
 #     so the baked POSTGRES_HOST / REDIS_URL are exercised as-is
-#   - mem_limit equals each component's Flux ram
+#   - mem_limit equals each component's Flux ram, and restart: always is FluxOS's policy
 #   - the edge copies FDM: TLS ends there, rails gets plain HTTP, no X-Forwarded-Proto
 #   - everything except the edge sits on an internal network with NO egress,
 #     so a phone-home attempt fails loudly in the logs instead of succeeding
@@ -36,6 +36,7 @@ services:
     depends_on: [fluxpostgres_quipchatwoot, fluxredis_quipchatwoot, minio-init]
     mem_limit: 2048m
     networks: [backend]
+    restart: always   # FluxOS's policy for every component
 
   fluxsidekiq_quipchatwoot:
     image: ${APP_IMAGE:?}
@@ -44,6 +45,7 @@ services:
     depends_on: [fluxpostgres_quipchatwoot, fluxredis_quipchatwoot, minio-init]
     mem_limit: 2048m
     networks: [backend]
+    restart: always   # FluxOS's policy for every component
 
   fluxpostgres_quipchatwoot:
     image: ${PG_IMAGE:?}
@@ -63,6 +65,7 @@ services:
     depends_on: [minio-init]
     mem_limit: 1024m
     networks: [backend]
+    restart: always   # FluxOS's policy for every component
 
   fluxredis_quipchatwoot:
     image: redis:7.4-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af
@@ -72,6 +75,7 @@ services:
     volumes: [redisdata:/data]
     mem_limit: 512m
     networks: [backend]
+    restart: always   # FluxOS's policy for every component
 
   # --- stand-ins and plumbing ---
 

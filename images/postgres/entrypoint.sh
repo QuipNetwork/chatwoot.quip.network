@@ -1,19 +1,27 @@
 #!/bin/bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Wraps the stock postgres entrypoint: refuses to start after a failed restore,
-# then runs the dump loop beside the server.
+# Wraps the stock postgres entrypoint: never serves a volume whose restore
+# failed, retries that restore on every boot, then runs the dump loop.
 #
 # Why the sentinel check has to live HERE: restore-on-boot.sh runs inside the
 # stock entrypoint, after initdb has already written PG_VERSION to the
 # persisted volume. Its exit 1 kills the container once; on the restart the
 # stock entrypoint sees PG_VERSION, skips init, and serves an empty database.
-# So the refusal is recorded as a sentinel on the volume and enforced here,
+# So the failure is recorded as a sentinel on the volume and acted on here,
 # before docker-entrypoint.sh can decide the database "already exists".
 #
-# Escape hatch: a container that refuses to start cannot be shelled into, so it
-# is an env var settable from the Flux dashboard. ALLOW_EMPTY_RESTORE=1 clears
-# the sentinel and starts on whatever is on the volume. Remove it afterwards.
+# The sentinel is only ever written into a cluster the failed restore itself
+# initialised, so that cluster holds nothing the bucket does not. Wiping it and
+# letting init + restore run again is therefore safe, and it means a restore
+# that failed for a passing reason (a Storj outage during a relocation, a key
+# fixed by a soft spec update) heals on a later boot instead of needing a hard
+# redeploy. FluxOS restarts the container after every failed attempt.
+#
+# Escape hatch, only for when the backups are genuinely gone: an env var,
+# because a container that will not start cannot be shelled into.
+# ALLOW_EMPTY_RESTORE=1 clears the sentinel and starts on the EMPTY cluster.
+# Chatwoot will then seed a fresh install. Remove it afterwards.
 set -euo pipefail
 
 log() { printf '[entrypoint] %s\n' "$*" >&2; }
@@ -29,18 +37,13 @@ if [ -e "$SENTINEL" ]; then
         log "⚠ REMOVE ALLOW_EMPTY_RESTORE from the spec once this is resolved, or the"
         log "  next failed restore will be cleared silently too."
     else
-        log "FATAL: a previous restore attempt failed on this volume and postgres will"
-        log "NOT start. Starting would serve an empty database, Chatwoot would seed a"
-        log "fresh install and reopen its public onboarding page, and the dump loop"
-        log "would then overwrite every good backup with it."
-        log ""
+        log "a previous restore failed on this volume -- it will NOT be served empty."
         log "what happened:"
         sed 's/^/[entrypoint]   /' "$SENTINEL" >&2 || true
-        log ""
-        log "Fix the backup store, then redeploy. If the data is genuinely gone and an"
-        log "empty database is what you want, set ALLOW_EMPTY_RESTORE=1 on this"
-        log "component, start once, then remove it."
-        exit 1
+        log "the cluster here was created by that failed attempt and holds nothing the"
+        log "bucket does not, so it is wiped and the restore runs again now. Until it"
+        log "succeeds postgres does not listen, and Chatwoot waits instead of seeding."
+        find "$PGDATA" -mindepth 1 -delete
     fi
 fi
 

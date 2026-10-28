@@ -14,8 +14,8 @@
 #
 # ⚠ Exiting non-zero is not enough on its own. initdb has already written
 # PG_VERSION, so the restart skips this directory and serves an empty database.
-# Every failure path therefore drops a sentinel on the persisted volume, which
-# entrypoint.sh checks before handing over to the stock entrypoint.
+# Every failure path therefore drops a sentinel on the persisted volume, and
+# entrypoint.sh wipes that volume and retries the restore on the next boot.
 set -Eeuo pipefail
 
 log() { printf '[restore-on-boot] %s\n' "$*" >&2; }

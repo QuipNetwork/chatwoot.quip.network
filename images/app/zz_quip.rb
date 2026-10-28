@@ -5,11 +5,13 @@
 # after upstream's initializers.
 
 # FDM terminates TLS and forwards plain HTTP with no X-Forwarded-Proto (the
-# wwwhttps frontend in flux-domain-manager's haproxyTemplate.js). Rails would
-# then see http:// while browsers send an https:// Origin, and the CSRF origin
-# check rejects every form POST with a 422 -- onboarding and the super-admin
-# login among them. Every request we serve arrived over FDM's TLS, so tell
-# Rails so. FORCE_SSL must stay false: Rails would redirect forever.
+# wwwhttps frontend in flux-domain-manager's haproxyTemplate.js). Rails then
+# believes every request is http://, which breaks the super-admin console twice
+# over (measured in the local rehearsal): its redirects and form actions are
+# built as http:// URLs, and its CSRF origin check rejects every write with a
+# 422 ("Origin https://... didn't match request.base_url http://..."). Every
+# request we serve arrived over FDM's TLS, so tell Rails so. FORCE_SSL must
+# stay false: Rails would redirect forever.
 if ActiveModel::Type::Boolean.new.cast(ENV.fetch('QUIP_ASSUME_SSL', false))
   Rails.application.config.assume_ssl = true
 end
