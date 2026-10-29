@@ -80,6 +80,25 @@ module QuipNoChatwootHub
   def emit_event(*) = nil
 end
 
+# /api reports data_services from `connection.active?`, which never connects:
+# under Rails 7.2 it is false for a pooled connection that has not run a query
+# yet. The pool reaper drops connections idle for 300 s, and on our own host
+# /api runs no query (SwitchLocale looks up a Portal only for foreign hosts),
+# so after any 5-minute lull it said "failing" until a real page load
+# reconnected -- a false Offline on the support.quip.network monitor every few
+# hours (measured 10-29). A real query connects when it can and raises when the
+# database is down, so the answer is true either way.
+module QuipHonestDbHealth
+  private
+
+  def postgres_status
+    ActiveRecord::Base.connection.select_value('SELECT 1') == 1 ? 'ok' : 'failing'
+  rescue ActiveRecord::ActiveRecordError
+    'failing'
+  end
+end
+
 Rails.application.config.to_prepare do
   ChatwootHub.singleton_class.prepend(QuipNoChatwootHub)
+  ApiController.prepend(QuipHonestDbHealth)
 end
