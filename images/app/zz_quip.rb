@@ -16,6 +16,57 @@ if ActiveModel::Type::Boolean.new.cast(ENV.fetch('QUIP_ASSUME_SSL', false))
   Rails.application.config.assume_ssl = true
 end
 
+# FDM's load balancers reach us from PUBLIC addresses, and Rack only trusts
+# private ones as proxies, so Rack::Request#ip -- the key for every Rack::Attack
+# throttle -- is the load balancer for every visitor (measured on Flux: /cable
+# logged "for 134.209.107.70" = fdm-lb-1-3). One shared bucket means 5 bad
+# logins from anyone lock every agent out. Trust exactly the FDM hostnames,
+# resolved at boot: their requests yield the address FDM appended to
+# X-Forwarded-For, and a direct hit on the node port with a forged header is
+# still judged by its real source. No DNS answer means no extra trust.
+# Re-resolved every 5 minutes, and an address stays trusted for 24 h after it
+# was last seen: FDM flips some names between addresses (fdm-lb-2-1 alternates
+# two IPs on a 15 s TTL), so one lookup is a sample, not the set.
+require 'resolv'
+require 'set'
+module QuipTrustedProxies
+  HOSTS = ENV.fetch('QUIP_TRUSTED_PROXY_HOSTS', '').split(',').map(&:strip).reject(&:empty?).freeze
+  REFRESH_SECONDS = 300
+  KEEP_SECONDS = 24 * 3600
+  @seen = {}
+  @ips = Set.new.freeze
+
+  def self.ips = @ips
+
+  # A failed lookup adds nothing and ages nothing out early.
+  def self.refresh(now = Time.now)
+    dns = Resolv::DNS.new.tap { |d| d.timeouts = 2 }
+    HOSTS.each do |host|
+      dns.getaddresses(host).each { |addr| @seen[addr.to_s] = now }
+    rescue StandardError
+      nil
+    end
+    @seen.delete_if { |_, last| now - last > KEEP_SECONDS }
+    @ips = Set.new(@seen.keys).freeze
+  ensure
+    dns&.close
+  end
+end
+
+if QuipTrustedProxies::HOSTS.any?
+  QuipTrustedProxies.refresh
+  rack_default_filter = Rack::Request.ip_filter
+  Rack::Request.ip_filter = ->(ip) { rack_default_filter.call(ip) || QuipTrustedProxies.ips.include?(ip) }
+  Thread.new do
+    loop do
+      sleep QuipTrustedProxies::REFRESH_SECONDS
+      QuipTrustedProxies.refresh
+    rescue StandardError
+      nil
+    end
+  end
+end
+
 # Chatwoot's hub calls send our installation id, version and hostname to
 # hub.2.chatwoot.com daily, even with DISABLE_TELEMETRY (that only drops the
 # counts), and onboarding's "subscribe" box sends the owner's name and email.

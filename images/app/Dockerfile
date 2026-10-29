@@ -30,6 +30,7 @@ ENV NODE_ENV=production \
     ENABLE_ACCOUNT_SIGNUP=false \
     FORCE_SSL=false \
     QUIP_ASSUME_SSL=true \
+    QUIP_TRUSTED_PROXY_HOSTS=fdm-lb-1-1.runonflux.io,fdm-lb-1-2.runonflux.io,fdm-lb-1-3.runonflux.io,fdm-lb-1-4.runonflux.io,fdm-lb-2-1.runonflux.io,fdm-lb-2-2.runonflux.io \
     DISABLE_TELEMETRY=true \
     DISABLE_GRAVATAR=true \
     ENABLE_PUSH_RELAY_SERVER=false \
