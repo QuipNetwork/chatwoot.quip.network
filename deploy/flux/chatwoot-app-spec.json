@@ -7,7 +7,7 @@
     {
       "name": "rails",
       "description": "Chatwoot web (Puma). Runs db:chatwoot_prepare before every start.",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-<sha>-amd64@sha256:<digest>",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-e059888-amd64@sha256:c167f6edcfac889857b0113d8eedce21d23b96f6d655cc62ca444a786edd7c03",
       "ports": [
         31986
       ],
@@ -39,7 +39,7 @@
     {
       "name": "sidekiq",
       "description": "Chatwoot background jobs (mail, notifications, scheduled jobs).",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-<sha>-amd64@sha256:<digest>",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-e059888-amd64@sha256:c167f6edcfac889857b0113d8eedce21d23b96f6d655cc62ca444a786edd7c03",
       "ports": [],
       "domains": [],
       "environmentParameters": [
@@ -70,7 +70,7 @@
     {
       "name": "postgres",
       "description": "Postgres 16 + pgvector. Dumps to S3 every 5 min, restores on a fresh volume.",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:pg16-<sha>-amd64@sha256:<digest>",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:pg16-e059888-amd64@sha256:0225cd1a7d493dd7030e4d68265fe59f8c8c80e7eac9af27258b86cac9677a28",
       "ports": [],
       "domains": [],
       "environmentParameters": [
