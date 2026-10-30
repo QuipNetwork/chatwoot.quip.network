@@ -7,7 +7,7 @@
     {
       "name": "rails",
       "description": "Chatwoot web (Puma). Runs db:chatwoot_prepare before every start.",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-dd21bfc-amd64@sha256:b691461aa3736ae54942e57503d0c06ef6f668ba3e1d29795a95d900f6962492",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-c370d4e-amd64@sha256:b77f3ece548e8c705ecb3be96301d0d27dc46b54a1fa6086e8e84a02db022d72",
       "ports": [
         31986
       ],
@@ -39,7 +39,7 @@
     {
       "name": "sidekiq",
       "description": "Chatwoot background jobs (mail, notifications, scheduled jobs).",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-dd21bfc-amd64@sha256:b691461aa3736ae54942e57503d0c06ef6f668ba3e1d29795a95d900f6962492",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-c370d4e-amd64@sha256:b77f3ece548e8c705ecb3be96301d0d27dc46b54a1fa6086e8e84a02db022d72",
       "ports": [],
       "domains": [],
       "environmentParameters": [
