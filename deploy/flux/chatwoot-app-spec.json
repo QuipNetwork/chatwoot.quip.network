@@ -96,7 +96,7 @@
     {
       "name": "redis",
       "description": "Redis for the Sidekiq queue and ActionCable. Loss on relocation is accepted.",
-      "repotag": "redis:7.4-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:redis7.4-3daae3b-amd64@sha256:d1a4f1becf67a9269cc5c43114b04842e95fa96f70d6984e103805dd9726d11f",
       "ports": [],
       "domains": [],
       "environmentParameters": [
