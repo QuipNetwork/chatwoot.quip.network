@@ -4,9 +4,9 @@
 # Build (and optionally push) one of this repo's images, check it, then print
 # the exact repotag for deploy/flux/chatwoot-app-spec.json.
 #
-#   scripts/build-and-push.sh app|postgres                 # build + check + push
-#   NO_PUSH=1   scripts/build-and-push.sh app|postgres     # build + check only
-#   PUSH_ONLY=1 scripts/build-and-push.sh app|postgres     # push the tag NO_PUSH built
+#   scripts/build-and-push.sh app|postgres|redis                 # build + check + push
+#   NO_PUSH=1   scripts/build-and-push.sh app|postgres|redis     # build + check only
+#   PUSH_ONLY=1 scripts/build-and-push.sh app|postgres|redis     # push the tag NO_PUSH built
 #
 # This repo has NO CI, so this is the whole release path.
 #
@@ -19,7 +19,7 @@
 # Requires for push: docker login registry.gitlab.com (PAT with write_registry).
 set -euo pipefail
 
-NAME="${1:?usage: build-and-push.sh app|postgres}"
+NAME="${1:?usage: build-and-push.sh app|postgres|redis}"
 REGISTRY="${REGISTRY:-registry.gitlab.com}"
 REPO="${REPO:-quip.network/chatwoot.quip.network}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,7 +28,8 @@ cd "$ROOT"
 case "$NAME" in
     app)      PREFIX="app-v4.19.1-ce" ;;
     postgres) PREFIX="pg16" ;;
-    *) echo "FATAL: unknown image '${NAME}' (app|postgres)" >&2; exit 1 ;;
+    redis)    PREFIX="redis7.4" ;;
+    *) echo "FATAL: unknown image '${NAME}' (app|postgres|redis)" >&2; exit 1 ;;
 esac
 
 SHA="$(git rev-parse --short HEAD 2>/dev/null || echo nohead)"
@@ -70,6 +71,17 @@ postgres)
         [ -f /usr/share/postgresql/16/extension/vector.control ] || { echo "FATAL: pgvector missing"; exit 1; }
     '
     echo "    ok: amd64, PGDATA, restore hook, dump-loop + dump-now, awscli, AWS_CA_BUNDLE, pgvector"
+    ;;
+redis)
+    ver="$(docker run --rm --entrypoint redis-server "$IMAGE" --version)"
+    case "$ver" in *" v=7.4."*) ;; *) echo "FATAL: redis-server is not 7.4: ${ver}" >&2; exit 1 ;; esac
+    # The updater compares RepoDigests[0]. Without our labels this image would
+    # share upstream's ID on the node (classic store: ID = config digest), and a
+    # node still holding the Docker Hub image could report that digest instead.
+    base="$(sed -n 's/^FROM \(redis:[^ ]*\).*/\1/p' images/redis/Dockerfile)"
+    [ "$(docker image inspect "$IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.base.name"}}')" = "$base" ] \
+        || { echo "FATAL: base.name label missing or not ${base}; the image would share upstream's ID" >&2; exit 1; }
+    echo "    ok: amd64, redis-server 7.4, own config (base.name label = FROM)"
     ;;
 app)
     # A secret baked into a public image is published the moment it is pushed.

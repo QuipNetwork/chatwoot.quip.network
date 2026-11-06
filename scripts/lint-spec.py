@@ -15,6 +15,9 @@ import sys
 MAX_ENV = 20        # environmentParameters per component
 MAX_ENV_LEN = 400   # characters per entry
 REPOTAG = re.compile(r"^[^@\s]+:[^@\s]+@sha256:[0-9a-f]{64}$")
+# Every 6 h FluxOS soft-redeploys the whole app when a component's TAG has moved,
+# whatever the @sha256 pin says (QUI-2170). Only tags we write once are safe.
+OWN_REGISTRY = "registry.gitlab.com/quip.network/chatwoot.quip.network:"
 PLACEHOLDER = re.compile(r"<[^>]+>")
 # Values that must agree across components, or they connect to nothing.
 SHARED = ("POSTGRES_PASSWORD", "REDIS_PASSWORD", "SECRET_KEY_BASE")
@@ -54,6 +57,9 @@ def main(argv):
         tag = c.get("repotag", "")
         if not REPOTAG.match(tag):
             (errors if filled else warnings).append(f"{name}: repotag is not repo:TAG@sha256:<64 hex>: {tag}")
+        elif not tag.startswith(OWN_REGISTRY):
+            errors.append(f"{name}: repotag is not in {OWN_REGISTRY.rstrip(':')}. FluxOS checks the tag, not the "
+                          f"digest, so a moved upstream tag redeploys the app every 6 h. Mirror it: {tag}")
         for field in ("cpu", "ram", "hdd"):
             if not isinstance(c.get(field), (int, float)) or c[field] <= 0:
                 errors.append(f"{name}: {field} must be a positive number")

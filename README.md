@@ -10,6 +10,7 @@ Upstream code is unchanged; this repo holds only what it takes to run it on Flux
 |---|---|
 | `images/app/` | `chatwoot/chatwoot:v4.19.1-ce` plus baked non-secret config, the `zz_quip.rb` initializer and the start script. Rails and Sidekiq both run it. |
 | `images/postgres/` | `pgvector/pgvector:pg16` plus restore-on-empty, a dump loop to Storj, and `dump-now` |
+| `images/redis/` | Stock `redis:7.4-alpine`, unchanged, served from our registry. Every 6 h FluxOS redeploys the whole app if a component's tag has moved upstream, whatever its `@sha256` pin says, so every repotag must be a tag only we write (QUI-2170). `lint-spec.py` enforces it. |
 | `deploy/flux/chatwoot-app-spec.json` | Flux spec template. Secrets are `<placeholders>`, and the filled copy is never committed. |
 | `deploy/local/` | Local rehearsal behind an FDM-like edge, with no egress |
 | `scripts/` | `build-and-push.sh` (the whole release path, no CI) and `lint-spec.py` |
@@ -77,6 +78,7 @@ The dump loop never publishes an empty schema.
 ```sh
 NO_PUSH=1 scripts/build-and-push.sh postgres
 NO_PUSH=1 scripts/build-and-push.sh app
+NO_PUSH=1 scripts/build-and-push.sh redis
 deploy/local/up.sh                    # https://localhost:8443, mail at :8025, widget page at :8080
 docker compose -f deploy/local/compose.yaml down -v   # wipe
 ```

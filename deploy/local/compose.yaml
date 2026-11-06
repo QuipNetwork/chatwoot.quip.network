@@ -68,7 +68,7 @@ services:
     restart: always   # FluxOS's policy for every component
 
   fluxredis_quipchatwoot:
-    image: redis:7.4-alpine@sha256:6ba19c50b56777f5c11c58eff8ddb69d0d5f27ba131cffb63f180ccfd43c66af
+    image: ${REDIS_IMAGE:?}
     command: [sh, -c, 'exec docker-entrypoint.sh redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}

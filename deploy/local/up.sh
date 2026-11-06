@@ -4,7 +4,7 @@
 # Start the local rehearsal of the quipchatwoot Flux app.
 #
 #   deploy/local/up.sh                         # newest locally built images
-#   APP_IMAGE=... PG_IMAGE=... deploy/local/up.sh
+#   APP_IMAGE=... PG_IMAGE=... REDIS_IMAGE=... deploy/local/up.sh
 #   QUIP_ASSUME_SSL=false deploy/local/up.sh   # control arm: expect the FDM 422
 #
 # Then: https://localhost:8443 (accept the self-signed cert), the widget page at
@@ -22,9 +22,10 @@ newest() {
 }
 APP_IMAGE="${APP_IMAGE:-$(newest app)}"
 PG_IMAGE="${PG_IMAGE:-$(newest pg16)}"
-[ -n "$APP_IMAGE" ] && [ -n "$PG_IMAGE" ] \
-    || { echo "FATAL: build first: NO_PUSH=1 scripts/build-and-push.sh app|postgres" >&2; exit 1; }
-export APP_IMAGE PG_IMAGE
+REDIS_IMAGE="${REDIS_IMAGE:-$(newest redis7.4)}"
+[ -n "$APP_IMAGE" ] && [ -n "$PG_IMAGE" ] && [ -n "$REDIS_IMAGE" ] \
+    || { echo "FATAL: build first: NO_PUSH=1 scripts/build-and-push.sh app|postgres|redis" >&2; exit 1; }
+export APP_IMAGE PG_IMAGE REDIS_IMAGE
 
 # Rehearsal secrets: random, local, gitignored, stable across restarts so the
 # relocation drill restores into the same keys -- exactly as on Flux.
@@ -55,11 +56,12 @@ if [ ! -s certs/edge.pem ]; then
 fi
 
 # Record the images in .env too, so plain `docker compose logs|ps|down` work.
-sed -i -e '/^APP_IMAGE=/d' -e '/^PG_IMAGE=/d' .env
-printf 'APP_IMAGE=%s\nPG_IMAGE=%s\n' "$APP_IMAGE" "$PG_IMAGE" >> .env
+sed -i -e '/^APP_IMAGE=/d' -e '/^PG_IMAGE=/d' -e '/^REDIS_IMAGE=/d' .env
+printf 'APP_IMAGE=%s\nPG_IMAGE=%s\nREDIS_IMAGE=%s\n' "$APP_IMAGE" "$PG_IMAGE" "$REDIS_IMAGE" >> .env
 
 echo "==> app:      ${APP_IMAGE}"
 echo "==> postgres: ${PG_IMAGE}"
+echo "==> redis:    ${REDIS_IMAGE}"
 echo "==> QUIP_ASSUME_SSL=${QUIP_ASSUME_SSL:-true}  FDM_TIMEOUT=${FDM_TIMEOUT:-25s}"
 docker compose -f compose.yaml up -d "$@"
 echo
