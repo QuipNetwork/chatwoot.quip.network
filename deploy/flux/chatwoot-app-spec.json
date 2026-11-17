@@ -21,7 +21,9 @@
         "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=<rails-db-encryption-init>",
         "POSTGRES_PASSWORD=<pg-password-hex>",
         "REDIS_PASSWORD=<redis-password-hex>",
-        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply>",
+        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply-chatwoot>",
+        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
+        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
         "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
         "timeout=3600000"
@@ -49,7 +51,9 @@
         "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=<rails-db-encryption-init>",
         "POSTGRES_PASSWORD=<pg-password-hex>",
         "REDIS_PASSWORD=<redis-password-hex>",
-        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply>",
+        "SMTP_PASSWORD=<proton-smtp-token-for-no-reply-chatwoot>",
+        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
+        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
         "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>"
       ],
