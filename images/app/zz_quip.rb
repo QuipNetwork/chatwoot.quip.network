@@ -98,7 +98,51 @@ module QuipHonestDbHealth
   end
 end
 
+# Memory warning for rails and sidekiq (config/quip_memory_watch.rb has the why
+# and the arithmetic). Sidekiq has no HTTP port, so it reports through Redis;
+# /api adds both readings and "memory_warning":true, which the desk.quip.network
+# monitor turns into Degraded. No reading written means the key expires and /api
+# warns, so a reporter that dies is noticed too.
+require Rails.root.join('config/quip_memory_watch').to_s
+
+Sidekiq.configure_server do |config|
+  config.on(:startup) do
+    Thread.new do
+      loop do
+        reading = QuipMemoryWatch.reading
+        if reading
+          Redis::Alfred.set(QuipMemoryWatch::SIDEKIQ_KEY, QuipMemoryWatch.payload(reading, Time.now.to_i),
+                            ex: QuipMemoryWatch::KEY_TTL_SECONDS)
+        end
+      rescue StandardError => e
+        Sidekiq.logger.warn("quip memory report failed: #{e.class}: #{e.message}")
+      ensure
+        sleep QuipMemoryWatch::REPORT_SECONDS
+      end
+    end
+  end
+end
+
+# Upstream's index, plus the memory fields. Same four keys in the same order,
+# so the monitor's "data_services":"ok" match is untouched.
+module QuipMemoryInHealth
+  def index
+    sidekiq_json = begin
+      Redis::Alfred.get(QuipMemoryWatch::SIDEKIQ_KEY)
+    rescue StandardError
+      nil
+    end
+    render json: { version: Chatwoot.config[:version],
+                   timestamp: Time.now.utc.to_fs(:db),
+                   queue_services: redis_status,
+                   data_services: postgres_status }
+      .merge(QuipMemoryWatch.summary(rails: QuipMemoryWatch.reading, sidekiq_json: sidekiq_json,
+                                     now: Time.now.to_i))
+  end
+end
+
 Rails.application.config.to_prepare do
   ChatwootHub.singleton_class.prepend(QuipNoChatwootHub)
   ApiController.prepend(QuipHonestDbHealth)
+  ApiController.prepend(QuipMemoryInHealth)
 end

@@ -54,8 +54,10 @@ ENV NODE_ENV=production \
     STORAGE_FORCE_PATH_STYLE=true \
     VIPS_BLOCK_UNTRUSTED=1 \
     RAILS_LOG_TO_STDOUT=true \
-    LOG_LEVEL=info
+    LOG_LEVEL=info \
+    QUIP_MEMORY_WARN_PERCENT=80
 
+COPY quip_memory_watch.rb /app/config/quip_memory_watch.rb
 COPY zz_quip.rb /app/config/initializers/zz_quip.rb
 COPY quip-rails-start.sh /usr/local/bin/quip-rails-start.sh
 RUN chmod +x /usr/local/bin/quip-rails-start.sh
