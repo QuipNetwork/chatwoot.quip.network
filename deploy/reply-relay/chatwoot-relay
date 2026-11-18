@@ -1,0 +1,38 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Postfix pipe transport: hand one inbound email reply to Chatwoot's Action
+# Mailbox relay ingress. Postfix feeds the raw message on stdin.
+#
+# Exit 0  = Chatwoot took it (the ingress answers 204 and routes it later).
+# Exit 75 = EX_TEMPFAIL: Postfix keeps the mail and retries (up to
+#           maximal_queue_lifetime, 5 days), so a Chatwoot outage, a Flux
+#           relocation or a wrong password loses nothing.
+#
+# The password lives in AUTH as a curl config line, so it never shows up in
+# argv (ps) or in this script:  user = "actionmailbox:<password>"
+set -u
+
+URL=https://desk.quip.network/rails/action_mailbox/relay/inbound_emails
+AUTH=/etc/chatwoot-relay/curl-auth.conf
+
+if [ ! -r "$AUTH" ]; then
+    echo "chatwoot-relay: $AUTH is missing or unreadable, deferring" >&2
+    exit 75
+fi
+
+code=$(curl --silent --show-error --max-time 120 --proto =https \
+    --config "$AUTH" \
+    --header 'Content-Type: message/rfc822' \
+    --user-agent 'quip-reply-relay' \
+    --data-binary @- \
+    --output /dev/null --write-out '%{http_code}' \
+    "$URL") || code=${code:-000}
+
+case "$code" in
+    2??) exit 0 ;;
+    *)
+        echo "chatwoot-relay: Chatwoot answered HTTP $code, deferring" >&2
+        exit 75
+        ;;
+esac

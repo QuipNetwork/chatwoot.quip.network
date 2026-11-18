@@ -2,7 +2,9 @@
 
 Chatwoot CE (open-source support inbox: website live chat and an agent
 dashboard), packaged as the single-instance Flux app `quipchatwoot` and served at
-`support.quip.network`.
+`desk.quip.network` (`support.quip.network` until 2026-11-18; it now belongs to the
+support bot). Users' email replies come back through `reply.quip.network`: see
+[deploy/reply-relay/README.md](deploy/reply-relay/README.md).
 
 Upstream code is unchanged; this repo holds only what it takes to run it on Flux.
 

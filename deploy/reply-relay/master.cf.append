@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Chatwoot relay (chatwoot.quip.network deploy/reply-relay): one recipient per
+# run (chatwoot_destination_recipient_limit), at most 4 runs at once.
+# R = Return-Path header, O = X-Original-To header (the reply+<uuid> address).
+chatwoot  unix  -       n       n       -       4       pipe
+  flags=RO user=chatwoot-relay argv=/usr/local/bin/chatwoot-relay

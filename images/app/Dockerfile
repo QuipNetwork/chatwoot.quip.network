@@ -26,7 +26,7 @@ RUN apk add --no-cache --upgrade ca-certificates-bundle \
 ENV NODE_ENV=production \
     RAILS_ENV=production \
     INSTALLATION_ENV=docker \
-    FRONTEND_URL=https://support.quip.network \
+    FRONTEND_URL=https://desk.quip.network \
     ENABLE_ACCOUNT_SIGNUP=false \
     FORCE_SSL=false \
     QUIP_ASSUME_SSL=true \

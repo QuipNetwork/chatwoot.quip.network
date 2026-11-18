@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# The only addresses this MX accepts: Chatwoot's reply+<conversation-uuid>.
+# Used both as relay_recipient_maps and in smtpd_recipient_restrictions.
+/^reply\+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@reply\.quip\.network$/ OK

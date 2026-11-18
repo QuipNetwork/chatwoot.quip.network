@@ -12,7 +12,7 @@
         31986
       ],
       "domains": [
-        "support.quip.network"
+        "desk.quip.network"
       ],
       "environmentParameters": [
         "SECRET_KEY_BASE=<openssl-rand-hex-64>",
@@ -26,7 +26,10 @@
         "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
         "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
-        "timeout=3600000"
+        "timeout=3600000",
+        "FRONTEND_URL=https://desk.quip.network",
+        "RAILS_INBOUND_EMAIL_SERVICE=relay",
+        "RAILS_INBOUND_EMAIL_PASSWORD=<openssl-rand-hex-32, same value as /etc/chatwoot-relay/curl-auth.conf on developers-portal>"
       ],
       "commands": [],
       "containerPorts": [
@@ -55,7 +58,8 @@
         "SMTP_USERNAME=no-reply-chatwoot@quip.network",
         "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
-        "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>"
+        "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
+        "FRONTEND_URL=https://desk.quip.network"
       ],
       "commands": [
         "bundle",
