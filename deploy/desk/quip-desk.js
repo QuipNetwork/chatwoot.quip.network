@@ -4,7 +4,7 @@
 // On a ticket it adds a row of buttons above the reply box: send to triage, and for the Triage team, file a
 // new engineering issue (in a box holding the title the bot drafted, to edit first), attach to one, accept or
 // reject the bot's match, undo, and hand back. On every page it
-// adds a Handbook item to the left sidebar, opening the support team's handbook (the bot's /team page).
+// adds a Handbook item to the left sidebar, opening the support team's handbook (the bot's /handbook page, which desk.quip.network proxies to the bot; it shows only to people signed in to Chatwoot).
 //
 // A click does what the person could do by hand, through Chatwoot's own API with their own session: it adds
 // a private note (the bot reads `/eng ...` notes, and checks who wrote them) or runs one of the macros. The
@@ -39,8 +39,9 @@
     hopeMs: 10000, // how long the row shows what a click should cause before believing the server instead
     cacheMs: 300000,
     pollMs: 20000, // only used when Chatwoot's own copy of the ticket can't be read
-    // The support team's handbook (the bot's /team page).
-    handbookUrl: "https://support.quip.network/team",
+    // The support team's handbook. The Chatwoot host proxies /handbook* to the bot, and the bot checks the
+    // reader's Chatwoot sign-in cookie, so it has to be opened on this host, not on the bot's own address.
+    handbookUrl: "https://desk.quip.network/handbook",
   };
   const NAV_ID = "quip-desk-handbook";
   const BAR_ID = "quip-desk-bar";

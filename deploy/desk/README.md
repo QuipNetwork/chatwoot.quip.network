@@ -2,8 +2,10 @@
 
 `quip-desk.js` adds a row of buttons above the reply box on every ticket, so nobody has to open the
 Macros panel or type a `/eng` command. It also adds a **Handbook** item to Chatwoot's left sidebar, under Help
-Center, which opens the support team's handbook (the bot's `/team` page, from `docs/handbook/handbook.md`) in a
-new tab. Its address is `handbookUrl` in `CFG`, set to `https://support.quip.network/team`.
+Center, which opens the support team's handbook (the bot's `/handbook` page, from `docs/handbook/handbook.md`) in a
+new tab. Its address is `handbookUrl` in `CFG`: `https://desk.quip.network/handbook`. A reverse-proxy rule on the
+Chatwoot host sends `desk.quip.network/handbook*` to the bot, which shows the page only to people signed in to our
+Chatwoot account (it checks their Chatwoot session cookie). The bot's old `/team` address redirects there.
 
 | Who | Buttons |
 | --- | --- |
