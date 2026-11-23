@@ -141,6 +141,17 @@ module QuipMemoryInHealth
   end
 end
 
+# desk.quip.network/handbook* is the support bot's handbook, proxied from here
+# (config/quip_handbook_proxy.rb has the why). First in the stack, so no Rails
+# middleware runs for it and its answers never carry our session cookie.
+require Rails.root.join('config/quip_handbook_proxy').to_s
+quip_handbook_upstream = ENV.fetch('QUIP_HANDBOOK_UPSTREAM', '')
+if (upstream = QuipHandbookProxy.upstream_from_env(quip_handbook_upstream))
+  Rails.application.config.middleware.insert_before(0, QuipHandbookProxy, upstream: upstream, logger: Rails.logger)
+elsif !quip_handbook_upstream.strip.empty?
+  Rails.logger.warn('QUIP_HANDBOOK_UPSTREAM is not a bare http(s) origin; /handbook is not proxied')
+end
+
 Rails.application.config.to_prepare do
   ChatwootHub.singleton_class.prepend(QuipNoChatwootHub)
   ApiController.prepend(QuipHonestDbHealth)

@@ -93,16 +93,21 @@ app)
         [ -f /app/config/initializers/zz_quip.rb ] || { echo "FATAL: zz_quip.rb missing"; exit 1; }
         [ -f /app/config/quip_memory_watch.rb ] || { echo "FATAL: quip_memory_watch.rb missing"; exit 1; }
         [ "$QUIP_MEMORY_WARN_PERCENT" = "80" ] || { echo "FATAL: QUIP_MEMORY_WARN_PERCENT=$QUIP_MEMORY_WARN_PERCENT"; exit 1; }
+        [ -f /app/config/quip_handbook_proxy.rb ] || { echo "FATAL: quip_handbook_proxy.rb missing"; exit 1; }
+        [ "$QUIP_HANDBOOK_UPSTREAM" = "https://quip-support-bot.fly.dev" ] || { echo "FATAL: QUIP_HANDBOOK_UPSTREAM=$QUIP_HANDBOOK_UPSTREAM"; exit 1; }
         [ -x /usr/local/bin/quip-rails-start.sh ] || { echo "FATAL: start script missing"; exit 1; }
         [ -x /app/docker/entrypoints/rails.sh ] || { echo "FATAL: upstream entrypoint moved"; exit 1; }
         [ "$QUIP_ASSUME_SSL" = "true" ] && [ "$FORCE_SSL" = "false" ] || { echo "FATAL: TLS flags wrong"; exit 1; }
     '
-    # The memory watch's unit tests, run with the image's own Ruby against the
-    # copy it ships (the tests themselves stay out of the image).
-    docker run --rm --network none -v "${ROOT}/images/app/test:/q/test:ro" --entrypoint sh "$IMAGE" -c \
-        'cp /app/config/quip_memory_watch.rb /tmp/quip_memory_watch.rb && mkdir -p /tmp/test && cp /q/test/*.rb /tmp/test/ && ruby /tmp/test/quip_memory_watch_test.rb' \
-        | tail -1 | grep -q ' 0 failures, 0 errors' || { echo "FATAL: memory watch tests failed" >&2; exit 1; }
-    echo "    ok: amd64, no secrets in Config.Env, initializer + memory watch + start script + upstream entrypoint present, memory watch tests pass"
+    # The memory watch's and handbook proxy's unit tests, run with the image's
+    # own Ruby against the copies it ships (the tests themselves stay out of the
+    # image).
+    for t in quip_memory_watch quip_handbook_proxy; do
+        docker run --rm --network none -v "${ROOT}/images/app/test:/q/test:ro" --entrypoint sh "$IMAGE" -c \
+            "cp /app/config/${t}.rb /tmp/${t}.rb && mkdir -p /tmp/test && cp /q/test/*.rb /tmp/test/ && ruby /tmp/test/${t}_test.rb" \
+            | tail -1 | grep -q ' 0 failures, 0 errors' || { echo "FATAL: ${t} tests failed" >&2; exit 1; }
+    done
+    echo "    ok: amd64, no secrets in Config.Env, initializer + memory watch + handbook proxy + start script + upstream entrypoint present, both test suites pass"
     ;;
 esac
 

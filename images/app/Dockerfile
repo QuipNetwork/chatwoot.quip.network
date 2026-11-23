@@ -55,9 +55,11 @@ ENV NODE_ENV=production \
     VIPS_BLOCK_UNTRUSTED=1 \
     RAILS_LOG_TO_STDOUT=true \
     LOG_LEVEL=info \
-    QUIP_MEMORY_WARN_PERCENT=80
+    QUIP_MEMORY_WARN_PERCENT=80 \
+    QUIP_HANDBOOK_UPSTREAM=https://quip-support-bot.fly.dev
 
 COPY quip_memory_watch.rb /app/config/quip_memory_watch.rb
+COPY quip_handbook_proxy.rb /app/config/quip_handbook_proxy.rb
 COPY zz_quip.rb /app/config/initializers/zz_quip.rb
 COPY quip-rails-start.sh /usr/local/bin/quip-rails-start.sh
 RUN chmod +x /usr/local/bin/quip-rails-start.sh
