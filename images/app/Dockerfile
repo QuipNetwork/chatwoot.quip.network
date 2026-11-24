@@ -11,7 +11,7 @@
 #   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT, POSTGRES_PASSWORD,
 #   REDIS_PASSWORD, SMTP_PASSWORD, STORAGE_ACCESS_KEY_ID,
 #   STORAGE_SECRET_ACCESS_KEY
-FROM chatwoot/chatwoot:v4.19.1-ce@sha256:04895c7bd0550d9e74b45b7202787b56f7ee4e891ebbde0c429c8c32901b97cf
+FROM chatwoot/chatwoot:v4.20.1-ce@sha256:5c88eb71134268cb702ae902bb399a239175c4dc24b3f0c6d6b3a2533a377e43
 
 # ⚠ This container holds the Storj uploads key and the Proton SMTP token, so
 # its trust store must not accept the forged eMudhra chain (QUI-1923). The

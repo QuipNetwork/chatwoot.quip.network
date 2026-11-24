@@ -38,7 +38,7 @@ half a second later.
 ## Installing it (Keith)
 
 Chatwoot has an installation setting, `DASHBOARD_SCRIPTS`, whose contents are added to the end of every page
-of the agent app (checked in the v4.19.1 source: `dashboard_controller.rb` and `layouts/vueapp.html.erb`).
+of the agent app (checked in the v4.19.1 and v4.20.1 source: `dashboard_controller.rb` and `layouts/vueapp.html.erb`).
 
 - Set `DASHBOARD_SCRIPTS` to the contents of `quip-desk.js`, wrapped in a `<script>` tag.
 - The screen that edits this setting is in Chatwoot's Enterprise code, so on our community edition it has
