@@ -73,7 +73,9 @@ end
 # None of it is needed to run a self-hosted install.
 module QuipNoChatwootHub
   # CheckNewVersionsJob reads ['version'] from this, so a Hash, never nil.
-  def sync_with_hub = {}
+  # 4.20 passes refresh_billing: (the daily job and Super Admin's refresh), so
+  # take and ignore any keywords; without them every daily run would raise.
+  def sync_with_hub(**) = {}
   def register_instance(*) = nil
   def send_push(*) = nil
   def send_push_with_response(*) = nil
@@ -123,8 +125,10 @@ Sidekiq.configure_server do |config|
   end
 end
 
-# Upstream's index, plus the memory fields. Same four keys in the same order,
-# so the monitor's "data_services":"ok" match is untouched.
+# Upstream's index, plus the memory fields. Upstream's keys come first, in
+# upstream's order, so the monitor's "data_services":"ok" match is untouched.
+# 4.20 added mobile_app (the minimum app versions the mobile apps read); it is
+# kept whenever upstream defines it.
 module QuipMemoryInHealth
   def index
     sidekiq_json = begin
@@ -132,12 +136,13 @@ module QuipMemoryInHealth
     rescue StandardError
       nil
     end
-    render json: { version: Chatwoot.config[:version],
-                   timestamp: Time.now.utc.to_fs(:db),
-                   queue_services: redis_status,
-                   data_services: postgres_status }
-      .merge(QuipMemoryWatch.summary(rails: QuipMemoryWatch.reading, sidekiq_json: sidekiq_json,
-                                     now: Time.now.to_i))
+    body = { version: Chatwoot.config[:version],
+             timestamp: Time.now.utc.to_fs(:db),
+             queue_services: redis_status,
+             data_services: postgres_status }
+    body[:mobile_app] = { min_version: mobile_app_min_versions } if respond_to?(:mobile_app_min_versions, true)
+    render json: body.merge(QuipMemoryWatch.summary(rails: QuipMemoryWatch.reading, sidekiq_json: sidekiq_json,
+                                                    now: Time.now.to_i))
   end
 end
 

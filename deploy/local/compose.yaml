@@ -7,7 +7,7 @@
 #   - the edge copies FDM: TLS ends there, rails gets plain HTTP, no X-Forwarded-Proto
 #   - everything except the edge sits on an internal network with NO egress,
 #     so a phone-home attempt fails loudly in the logs instead of succeeding
-# Stand-ins: MinIO for Storj, Mailpit for Proton SMTP.
+# Stand-ins: SeaweedFS (as service "minio") for Storj, Mailpit for Proton SMTP.
 name: chatwoot-rehearsal
 
 x-app-secrets: &app-secrets
@@ -79,25 +79,49 @@ services:
 
   # --- stand-ins and plumbing ---
 
+  # SeaweedFS stands in for Storj under MinIO's old service name, port and
+  # credentials. MinIO's public images are gone (Docker Hub and quay.io both
+  # refuse an anonymous pull of minio/minio and minio/mc, found 2026-11-23), so
+  # the stack could no longer start on a box that did not already hold them.
+  # Same server and release as observe's flux-sim store and node07's CI cache.
+  # Each bucket is its own SeaweedFS collection and grows 7 volumes at its
+  # first write, so 10 slots fit only one bucket ("No writable volumes and no
+  # free volumes left" on the second); 40 small volumes fit both with room.
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    command: [server, /data]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_USER:?}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?}
-    volumes: [miniodata:/data]
-    networks: [backend]
-
-  minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
-    entrypoint: [sh, -c]
+    image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
+    entrypoint: [/bin/sh, -c]
     command:
       - |
-        until mc alias set local http://minio:9000 "$$MINIO_USER" "$$MINIO_PASSWORD" >/dev/null 2>&1; do sleep 1; done
-        mc mb -p local/chatwoot-db local/chatwoot-uploads
+        umask 077
+        printf '{"identities":[{"name":"rehearsal","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$MINIO_USER" "$$MINIO_PASSWORD" > /tmp/s3.json
+        exec weed server -dir=/data -ip=minio -ip.bind=0.0.0.0 -volume.max=40 -master.volumeSizeLimitMB=256 -master.telemetry=false -s3 -s3.port=9000 -s3.config=/tmp/s3.json
     environment:
       MINIO_USER: ${MINIO_USER:?}
       MINIO_PASSWORD: ${MINIO_PASSWORD:?}
+    volumes: [miniodata:/data]
+    networks: [backend]
+
+  # Makes the two buckets. SeaweedFS answers before it accepts writes (about
+  # 30 s of "master is warming up"), so retry until both exist. It runs in our
+  # postgres image because that already carries awscli.
+  minio-init:
+    image: ${PG_IMAGE:?}
+    entrypoint: [sh, -c]
+    command:
+      - |
+        for b in chatwoot-db chatwoot-uploads; do
+          n=0
+          until aws --endpoint-url http://minio:9000 s3api head-bucket --bucket "$$b" >/dev/null 2>&1 \
+                || aws --endpoint-url http://minio:9000 s3api create-bucket --bucket "$$b" >/dev/null 2>&1; do
+            n=$$((n + 1)); [ "$$n" -lt 90 ] || { echo "FATAL: could not create $$b"; exit 1; }
+            sleep 2
+          done
+          echo "bucket $$b ready"
+        done
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_USER:?}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_PASSWORD:?}
+      AWS_DEFAULT_REGION: us-east-1
     depends_on: [minio]
     restart: "no"
     networks: [backend]

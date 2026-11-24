@@ -26,7 +26,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 case "$NAME" in
-    app)      PREFIX="app-v4.19.1-ce" ;;
+    app)      PREFIX="app-v4.20.1-ce" ;;
     postgres) PREFIX="pg16" ;;
     redis)    PREFIX="redis7.4" ;;
     *) echo "FATAL: unknown image '${NAME}' (app|postgres|redis)" >&2; exit 1 ;;
@@ -88,7 +88,8 @@ app)
     leaked="$(docker image inspect "$IMAGE" --format '{{range .Config.Env}}{{println .}}{{end}}' \
         | grep -E '^(SECRET_KEY_BASE|ACTIVE_RECORD_ENCRYPTION_[A-Z_]+|POSTGRES_PASSWORD|REDIS_PASSWORD|SMTP_PASSWORD|STORAGE_ACCESS_KEY_ID|STORAGE_SECRET_ACCESS_KEY)=' || true)"
     [ -z "$leaked" ] || { echo "FATAL: secret variables baked into the image:" >&2; echo "$leaked" | cut -d= -f1 >&2; exit 1; }
-    docker run --rm --entrypoint sh "$IMAGE" -c '
+    WANT_VERSION="${PREFIX#app-v}"; WANT_VERSION="${WANT_VERSION%-ce}"
+    docker run --rm -e WANT_VERSION="$WANT_VERSION" --entrypoint sh "$IMAGE" -c '
         set -e
         [ -f /app/config/initializers/zz_quip.rb ] || { echo "FATAL: zz_quip.rb missing"; exit 1; }
         [ -f /app/config/quip_memory_watch.rb ] || { echo "FATAL: quip_memory_watch.rb missing"; exit 1; }
@@ -98,6 +99,9 @@ app)
         [ -x /usr/local/bin/quip-rails-start.sh ] || { echo "FATAL: start script missing"; exit 1; }
         [ -x /app/docker/entrypoints/rails.sh ] || { echo "FATAL: upstream entrypoint moved"; exit 1; }
         [ "$QUIP_ASSUME_SSL" = "true" ] && [ "$FORCE_SSL" = "false" ] || { echo "FATAL: TLS flags wrong"; exit 1; }
+        want="${WANT_VERSION}"
+        got="$(grep -m1 -o "version: *.[0-9.]*" /app/config/app.yml | tr -dc "0-9.")"
+        [ "$got" = "$want" ] || { echo "FATAL: Chatwoot $got, tag says $want"; exit 1; }
     '
     # The memory watch's and handbook proxy's unit tests, run with the image's
     # own Ruby against the copies it ships (the tests themselves stay out of the
