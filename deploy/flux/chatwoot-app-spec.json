@@ -7,7 +7,7 @@
     {
       "name": "rails",
       "description": "Chatwoot web (Puma). Runs db:chatwoot_prepare before every start.",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-fb63a43-amd64@sha256:c870ad5864021416fa37fc402359c27194dc89c88110c38aea14b4e0c98de8c0",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.20.1-ce-0c6e2f4-amd64@sha256:bb447ade8b6ecaff78f9474cb70b074b245d24b422028e4f24979522eabc233b",
       "ports": [
         31986
       ],
@@ -22,11 +22,11 @@
         "POSTGRES_PASSWORD=<pg-password-hex>",
         "REDIS_PASSWORD=<redis-password-hex>",
         "SMTP_PASSWORD=<proton-smtp-token-for-no-reply-chatwoot>",
-        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
-        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
         "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
         "timeout=3600000",
+        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
+        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "FRONTEND_URL=https://desk.quip.network",
         "RAILS_INBOUND_EMAIL_SERVICE=relay",
         "RAILS_INBOUND_EMAIL_PASSWORD=<openssl-rand-hex-32, same value as /etc/chatwoot-relay/curl-auth.conf on developers-portal>"
@@ -44,7 +44,7 @@
     {
       "name": "sidekiq",
       "description": "Chatwoot background jobs (mail, notifications, scheduled jobs).",
-      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.19.1-ce-fb63a43-amd64@sha256:c870ad5864021416fa37fc402359c27194dc89c88110c38aea14b4e0c98de8c0",
+      "repotag": "registry.gitlab.com/quip.network/chatwoot.quip.network:app-v4.20.1-ce-0c6e2f4-amd64@sha256:bb447ade8b6ecaff78f9474cb70b074b245d24b422028e4f24979522eabc233b",
       "ports": [],
       "domains": [],
       "environmentParameters": [
@@ -55,10 +55,10 @@
         "POSTGRES_PASSWORD=<pg-password-hex>",
         "REDIS_PASSWORD=<redis-password-hex>",
         "SMTP_PASSWORD=<proton-smtp-token-for-no-reply-chatwoot>",
-        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
-        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "STORAGE_ACCESS_KEY_ID=<storj-UPLOADS-access-key>",
         "STORAGE_SECRET_ACCESS_KEY=<storj-UPLOADS-secret-key>",
+        "SMTP_USERNAME=no-reply-chatwoot@quip.network",
+        "MAILER_SENDER_EMAIL=Quip Support <no-reply-chatwoot@quip.network>",
         "FRONTEND_URL=https://desk.quip.network"
       ],
       "commands": [
@@ -117,7 +117,7 @@
       ],
       "containerPorts": [],
       "containerData": "/data",
-      "cpu": 0.25,
+      "cpu": 0.3,
       "ram": 512,
       "hdd": 1,
       "repoauth": ""
