@@ -75,6 +75,10 @@ The dump loop never publishes an empty schema.
 2. Rehearse locally (below).
 3. `dump-now` on Flux, then `PUSH_ONLY=1 scripts/build-and-push.sh app`.
 4. Paste the printed repotag into the rails and sidekiq components. Rails migrates on start.
+5. **In the same change, update desk's `pinned` and `checked` in
+   `observe.quip.network/deploy/upstream-watch/pins.toml`.** The weekly upstream watch judges new
+   security advisories against that pin; for desk it also compares the pin with the live `/api`
+   version and fails the run until they match.
 
 ## Local rehearsal
 
