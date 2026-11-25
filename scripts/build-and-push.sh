@@ -26,7 +26,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 case "$NAME" in
-    app)      PREFIX="app-v4.20.1-ce" ;;
+    # The app's version comes from its FROM line, so an upgrade edits one place
+    # (and scripts/canary.sh can build on a newer upstream by swapping that line).
+    app)      PREFIX="app-$(sed -n 's|^FROM chatwoot/chatwoot:\([^@ ]*\).*|\1|p' images/app/Dockerfile)"
+              [ "$PREFIX" != "app-" ] || { echo "FATAL: no 'FROM chatwoot/chatwoot:<tag>' line in images/app/Dockerfile" >&2; exit 1; } ;;
     postgres) PREFIX="pg16" ;;
     redis)    PREFIX="redis7.4" ;;
     *) echo "FATAL: unknown image '${NAME}' (app|postgres|redis)" >&2; exit 1 ;;

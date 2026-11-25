@@ -15,7 +15,8 @@ Upstream code is unchanged; this repo holds only what it takes to run it on Flux
 | `images/redis/` | Stock `redis:7.4-alpine`, unchanged, served from our registry. Every 6 h FluxOS redeploys the whole app if a component's tag has moved upstream, whatever its `@sha256` pin says, so every repotag must be a tag only we write (QUI-2170). `lint-spec.py` enforces it. |
 | `deploy/flux/chatwoot-app-spec.json` | Flux spec template. Secrets are `<placeholders>`, and the filled copy is never committed. |
 | `deploy/local/` | Local rehearsal behind an FDM-like edge, with no egress |
-| `scripts/` | `build-and-push.sh` (the whole release path, no CI) and `lint-spec.py` |
+| `scripts/` | `build-and-push.sh` (the whole release path, by hand), `canary.sh` (the weekly canary, below) and `lint-spec.py` |
+| `.gitlab-ci.yml` | The weekly canary only: no push or merge-request pipelines, and nothing that pushes |
 
 ## What the app image changes
 
@@ -91,6 +92,29 @@ docker compose -f deploy/local/compose.yaml down -v   # wipe
   console's form actions turn into `http://` URLs and writes return 422.
 - **Relocation drill:** `docker compose ... rm -sf fluxpostgres_quipchatwoot`,
   `docker volume rm chatwoot-rehearsal_pgdata`, `up.sh`.
+
+## Weekly canary
+
+`scripts/canary.sh` answers one question ahead of an upgrade: does Chatwoot's
+newest CE release still build with our overlay and boot the way the Flux app
+runs it? It pushes nothing.
+
+1. Asks GitHub for the newest release and uses its `chatwoot/chatwoot:<tag>-ce`.
+2. Points `images/app/Dockerfile` at it in its own checkout only, and builds with
+   `NO_PUSH`, so `build-and-push.sh`'s asserts and Ruby tests run.
+3. Boots `deploy/local` with that app image and the postgres and redis images the
+   deployed spec pins.
+4. Checks rails' `/api` from inside the stack (the new version, `queue_services`
+   and `data_services` ok) and that sidekiq stays up.
+
+It runs in CI on node07 from a weekly schedule (CI/CD → Schedules), or in any
+pipeline run with `CANARY=1`; GitLab mails a failed scheduled run to the
+schedule's owner. It also runs on a workstation: `scripts/canary.sh`, then
+`scripts/canary.sh --down` and `git checkout images/app`.
+
+A boot on an empty database proves the release starts and migrates from
+scratch. It says nothing about migrating our real data: that is still step 2 of
+the upgrade above, with `dump-now` first.
 
 ## License
 
