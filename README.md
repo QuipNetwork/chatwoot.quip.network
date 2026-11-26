@@ -28,6 +28,9 @@ Upstream code is unchanged; this repo holds only what it takes to run it on Flux
 - **No calls to Chatwoot's hub.** Upstream sends the install id, version and
   hostname to `hub.2.chatwoot.com` daily, even with `DISABLE_TELEMETRY`.
 - **`DISABLE_GRAVATAR`.** Otherwise contact email hashes are sent to Gravatar.
+- **Emailed replies are trimmed.** A reply's message text is what the user wrote,
+  without their signature or the quoted thread, so the bot and webhooks don't
+  get the whole thread. The desk still shows the full email.
 - **Migrations run before every start.** `db:chatwoot_prepare` migrates an existing schema.
   On an empty database it seeds a fresh install and reopens the public
   onboarding page. That's why Postgres must never come up empty by accident (see below).
