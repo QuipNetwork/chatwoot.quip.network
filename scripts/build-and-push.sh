@@ -98,6 +98,7 @@ app)
         [ -f /app/config/quip_memory_watch.rb ] || { echo "FATAL: quip_memory_watch.rb missing"; exit 1; }
         [ "$QUIP_MEMORY_WARN_PERCENT" = "80" ] || { echo "FATAL: QUIP_MEMORY_WARN_PERCENT=$QUIP_MEMORY_WARN_PERCENT"; exit 1; }
         [ -f /app/config/quip_handbook_proxy.rb ] || { echo "FATAL: quip_handbook_proxy.rb missing"; exit 1; }
+        [ -f /app/config/quip_email_reply.rb ] || { echo "FATAL: quip_email_reply.rb missing"; exit 1; }
         [ "$QUIP_HANDBOOK_UPSTREAM" = "https://quip-support-bot.fly.dev" ] || { echo "FATAL: QUIP_HANDBOOK_UPSTREAM=$QUIP_HANDBOOK_UPSTREAM"; exit 1; }
         [ -x /usr/local/bin/quip-rails-start.sh ] || { echo "FATAL: start script missing"; exit 1; }
         [ -x /app/docker/entrypoints/rails.sh ] || { echo "FATAL: upstream entrypoint moved"; exit 1; }
@@ -106,15 +107,20 @@ app)
         got="$(grep -m1 -o "version: *.[0-9.]*" /app/config/app.yml | tr -dc "0-9.")"
         [ "$got" = "$want" ] || { echo "FATAL: Chatwoot $got, tag says $want"; exit 1; }
     '
-    # The memory watch's and handbook proxy's unit tests, run with the image's
-    # own Ruby against the copies it ships (the tests themselves stay out of the
-    # image).
-    for t in quip_memory_watch quip_handbook_proxy; do
+    # The memory watch's, handbook proxy's and email reply's unit tests, run
+    # with the image's own Ruby against the copies it ships (the tests
+    # themselves stay out of the image).
+    for t in quip_memory_watch quip_handbook_proxy quip_email_reply; do
         docker run --rm --network none -v "${ROOT}/images/app/test:/q/test:ro" --entrypoint sh "$IMAGE" -c \
             "cp /app/config/${t}.rb /tmp/${t}.rb && mkdir -p /tmp/test && cp /q/test/*.rb /tmp/test/ && ruby /tmp/test/${t}_test.rb" \
             | tail -1 | grep -q ' 0 failures, 0 errors' || { echo "FATAL: ${t} tests failed" >&2; exit 1; }
     done
-    echo "    ok: amd64, no secrets in Config.Env, initializer + memory watch + handbook proxy + start script + upstream entrypoint present, both test suites pass"
+    # The email reply patch against the real mail classes, through zz_quip.rb.
+    # Rails boots without a database here; its boot noise is dropped.
+    docker run --rm --network none -e SECRET_KEY_BASE=build-check-only -v "${ROOT}/images/app/test:/q:ro" \
+        --entrypoint sh "$IMAGE" -c 'cd /app && bundle exec rails runner /q/quip_email_reply_check.rb 2>&1' \
+        | tail -1 | grep -qx 'quip_email_reply check: ok' || { echo "FATAL: email reply check failed" >&2; exit 1; }
+    echo "    ok: amd64, no secrets in Config.Env, initializer + memory watch + handbook proxy + email reply + start script + upstream entrypoint present, all three test suites + the email reply check pass"
     ;;
 esac
 

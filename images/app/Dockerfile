@@ -60,6 +60,7 @@ ENV NODE_ENV=production \
 
 COPY quip_memory_watch.rb /app/config/quip_memory_watch.rb
 COPY quip_handbook_proxy.rb /app/config/quip_handbook_proxy.rb
+COPY quip_email_reply.rb /app/config/quip_email_reply.rb
 COPY zz_quip.rb /app/config/initializers/zz_quip.rb
 COPY quip-rails-start.sh /usr/local/bin/quip-rails-start.sh
 RUN chmod +x /usr/local/bin/quip-rails-start.sh

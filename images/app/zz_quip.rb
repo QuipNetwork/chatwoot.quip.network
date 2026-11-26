@@ -157,8 +157,22 @@ elsif !quip_handbook_upstream.strip.empty?
   Rails.logger.warn('QUIP_HANDBOOK_UPSTREAM is not a bare http(s) origin; /handbook is not proxied')
 end
 
+# An emailed reply's message text is what the user wrote, without their
+# signature or the quoted thread (config/quip_email_reply.rb has the why).
+# Every inbound mail goes through an ApplicationMailbox subclass (ours come in
+# as reply+<uuid>@ to ReplyMailbox).
+require Rails.root.join('config/quip_email_reply').to_s
+module QuipTrimmedEmailContent
+  private
+
+  def mail_content
+    QuipEmailReply.content(processed_mail.text_content, processed_mail.html_content) || super
+  end
+end
+
 Rails.application.config.to_prepare do
   ChatwootHub.singleton_class.prepend(QuipNoChatwootHub)
   ApiController.prepend(QuipHonestDbHealth)
   ApiController.prepend(QuipMemoryInHealth)
+  ApplicationMailbox.prepend(QuipTrimmedEmailContent)
 end
